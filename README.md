@@ -1,13 +1,17 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="pi-pulse: Extensions that sharpen your Pi workflow." width="100%">
+</p>
+
 # pi-pulse
 
-A focused [Pi Coding Agent](https://pi.dev) package with two lightweight status extensions:
+An evolving workshop for building sharp, lightweight extensions for the [Pi Coding Agent](https://pi.dev). Each extension is designed to solve one workflow problem well while remaining easy to inspect, test, and install.
+
+The collection currently starts with two observability extensions and is intended to grow over time:
 
 - **Subscription usage** — provider quota, reset countdowns, and DeepSeek balance/peak pricing.
 - **Live throughput** — streaming decode speed, final token rate, TTFT, and input/cache details.
 
-Discord Rich Presence is intentionally not included.
-
-## Features
+## Extension catalog
 
 ### Subscription usage
 
@@ -49,7 +53,7 @@ Commands:
 
 ## Install
 
-From GitHub after the repository is published:
+From GitHub:
 
 ```bash
 pi install git:github.com/zhugez/pi-pulse

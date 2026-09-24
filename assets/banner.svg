@@ -1,0 +1,38 @@
+<svg width="1400" height="420" viewBox="0 0 1400 420" xmlns="http://www.w3.org/2000/svg">
+  <title>pi-pulse banner</title>
+  <desc>pi-pulse: Extensions that sharpen your Pi workflow.</desc>
+  
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#18181b" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1400" height="420" fill="#09090b"/>
+  <rect width="1400" height="420" fill="url(#grid)"/>
+
+  <!-- Background huge typography -->
+  <text x="820" y="440" fill="#121214" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="340" font-weight="900" letter-spacing="-14" opacity="0.8">PULSE</text>
+
+  <!-- The pulse mark on the right -->
+  <g transform="translate(920, 90) scale(1.4)">
+    <rect x="64" y="64" width="48" height="48" fill="#18181b" stroke="#3f3f46" stroke-width="6"/>
+    <rect x="144" y="144" width="48" height="48" fill="#18181b" stroke="#3f3f46" stroke-width="6"/>
+    <path d="M -50 88 L 88 88 L 88 168 L 400 168" fill="none" stroke="#06b6d4" stroke-width="12" stroke-linejoin="miter"/>
+    <rect x="82" y="82" width="12" height="12" fill="#a3e635" />
+    <rect x="162" y="162" width="12" height="12" fill="#fafaf9" />
+  </g>
+
+  <!-- Label / Badge -->
+  <rect x="100" y="120" width="190" height="32" fill="#27272a"/>
+  <text x="116" y="141" fill="#a3e635" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="13" font-weight="bold" letter-spacing="1">PI EXTENSION WORKSHOP</text>
+
+  <!-- Title -->
+  <text x="94" y="250" fill="#fafaf9" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="96" font-weight="800" letter-spacing="-4">pi-pulse</text>
+
+  <!-- Subtitle -->
+  <text x="100" y="310" fill="#a1a1aa" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="28" font-weight="500" letter-spacing="-0.5">Extensions that sharpen your Pi workflow.</text>
+
+  <line x1="100" y1="360" x2="480" y2="360" stroke="#27272a" stroke-width="2"/>
+  <rect x="480" y="357" width="6" height="6" fill="#06b6d4"/>
+</svg>
