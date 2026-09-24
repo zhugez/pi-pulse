@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-check_dir="$(mktemp -d "${TMPDIR:-/tmp}/pi-usage-throughput-test.XXXXXX")"
+check_dir="$(mktemp -d "${TMPDIR:-/tmp}/pi-pulse-test.XXXXXX")"
 trap 'rm -rf "$check_dir"' EXIT
 printf '{"type":"module"}\n' >"$check_dir/package.json"
 

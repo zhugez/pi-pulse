@@ -1,4 +1,4 @@
-# pi-usage-throughput
+# pi-pulse
 
 A focused [Pi Coding Agent](https://pi.dev) package with two lightweight status extensions:
 
@@ -52,13 +52,13 @@ Commands:
 From GitHub after the repository is published:
 
 ```bash
-pi install git:github.com/zhugez/pi-usage-throughput
+pi install git:github.com/zhugez/pi-pulse
 ```
 
 For local development:
 
 ```bash
-pi install /home/dev/pi-usage-throughput
+pi install /home/dev/pi-pulse
 ```
 
 Reload an active Pi session with:

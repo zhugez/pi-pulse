@@ -1,16 +1,16 @@
 {
-  "name": "pi-usage-throughput",
+  "name": "pi-pulse",
   "version": "1.0.0",
   "description": "Quota and live throughput status extensions for Pi Coding Agent",
   "type": "module",
   "author": "zhugez",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhugez/pi-usage-throughput.git"
+    "url": "https://github.com/zhugez/pi-pulse.git"
   },
-  "homepage": "https://github.com/zhugez/pi-usage-throughput#readme",
+  "homepage": "https://github.com/zhugez/pi-pulse#readme",
   "bugs": {
-    "url": "https://github.com/zhugez/pi-usage-throughput/issues"
+    "url": "https://github.com/zhugez/pi-pulse/issues"
   },
   "keywords": [
     "pi-package",
