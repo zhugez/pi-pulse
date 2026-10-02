@@ -43,6 +43,17 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createUsageCache } from "./subscription-usage/cache.ts";
+import {
+	asRecord,
+	normalizePercent,
+	normalizeUsageData,
+	type UsageBalance,
+	type UsageData,
+} from "./subscription-usage/data.ts";
+
+// Preserve the existing extension's exports for callers and tests.
+export { normalizeUsageData, type UsageBalance, type UsageData } from "./subscription-usage/data.ts";
 
 interface ApiKeyCredential {
 	type: "api_key";
@@ -99,6 +110,8 @@ const CACHE_PATH = path.join(
 	"agent",
 	"subscription-usage-cache.json",
 );
+// Shared across extension instances, as the previous module-level cache was.
+const diskCache = createUsageCache(CACHE_PATH);
 const PREFS_PATH = path.join(
 	os.homedir(),
 	".pi",
@@ -164,172 +177,6 @@ async function savePrefs(prefs: UsagePrefs): Promise<void> {
 		);
 	} catch (error) {
 		console.error("[subscription-usage] failed to save usage prefs:", error);
-	}
-}
-
-/** Account balance for pay-as-you-go providers (e.g. the DeepSeek API). */
-export interface UsageBalance {
-	currency: string;
-	total: number;
-}
-
-/** Percentages per window key, plus optional plan, reset times (ms epoch), and balance. */
-export interface UsageData {
-	windows: Record<string, number>;
-	plan?: string;
-	resets?: Record<string, number>;
-	balance?: UsageBalance;
-	resetsLeft?: number;
-}
-
-interface DiskCacheRecord {
-	data: UsageData;
-	fetchedAt: number;
-}
-
-type DiskCache = Record<string, DiskCacheRecord>;
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-	return value !== null && typeof value === "object" && !Array.isArray(value)
-		? (value as Record<string, unknown>)
-		: undefined;
-}
-
-function finiteNumber(value: unknown): number | undefined {
-	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function normalizePercent(value: unknown): number | undefined {
-	const percent = finiteNumber(value);
-	return percent === undefined ? undefined : Math.min(100, Math.max(0, percent));
-}
-
-function normalizeResets(value: unknown): Record<string, number> | undefined {
-	const record = asRecord(value);
-	if (!record) return undefined;
-	const entries = Object.entries(record).flatMap(([key, reset]) => {
-		const value = finiteNumber(reset);
-		return value !== undefined && value >= 0 ? [[key, value] as const] : [];
-	});
-	return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-}
-
-function normalizeBalance(value: unknown): UsageBalance | undefined {
-	const record = asRecord(value);
-	if (!record) return undefined;
-	const currency =
-		typeof record.currency === "string" ? record.currency.trim().toUpperCase() : "";
-	const total = finiteNumber(record.total);
-	if (!currency || total === undefined) return undefined;
-	return { currency, total };
-}
-
-function normalizeResetsLeft(value: unknown): number | undefined {
-	const count = finiteNumber(value);
-	return count !== undefined && count >= 0 ? Math.floor(count) : undefined;
-}
-
-/** Decode provider or disk-cache data before it reaches rendering or scheduling. */
-export function normalizeUsageData(value: unknown): UsageData | undefined {
-	const record = asRecord(value);
-	const windowsRecord = asRecord(record?.windows);
-	const balance = normalizeBalance(record?.balance);
-	if (!windowsRecord && !balance) return undefined;
-
-	const windows = windowsRecord
-		? (Object.fromEntries(
-				Object.entries(windowsRecord).flatMap(([key, percent]) => {
-					const normalized = normalizePercent(percent);
-					return normalized === undefined ? [] : [[key, normalized] as const];
-				}),
-			) as Record<string, number>)
-		: {};
-	if (Object.keys(windows).length === 0 && !balance) return undefined;
-
-	const plan = typeof record?.plan === "string" ? record.plan.trim() : undefined;
-	const resets = normalizeResets(record?.resets);
-	const resetsLeft = normalizeResetsLeft(record?.resetsLeft);
-	return {
-		windows,
-		...(plan ? { plan } : {}),
-		...(resets ? { resets } : {}),
-		...(balance ? { balance } : {}),
-		...(resetsLeft !== undefined ? { resetsLeft } : {}),
-	};
-}
-
-function normalizeDiskCache(value: unknown): DiskCache {
-	const record = asRecord(value);
-	if (!record) return {};
-	const entries = Object.entries(record).flatMap(([providerId, candidate]) => {
-		const cacheRecord = asRecord(candidate);
-		const data = normalizeUsageData(cacheRecord?.data);
-		const fetchedAt = finiteNumber(cacheRecord?.fetchedAt);
-		return data && fetchedAt !== undefined && fetchedAt >= 0
-			? [[providerId, { data, fetchedAt }] as const]
-			: [];
-	});
-	return Object.fromEntries(entries);
-}
-
-let diskCacheSnapshot: DiskCache = {};
-let diskCacheWriteQueue: Promise<void> = Promise.resolve();
-
-async function loadDiskCache(): Promise<DiskCache> {
-	try {
-		const raw = await fs.promises.readFile(CACHE_PATH, "utf8");
-		diskCacheSnapshot = normalizeDiskCache(JSON.parse(raw) as unknown);
-	} catch {
-		// Keep the last valid snapshot during a partial read or file collision.
-	}
-	return diskCacheSnapshot;
-}
-
-async function persistDiskCache(cache: DiskCache): Promise<void> {
-	const dir = path.dirname(CACHE_PATH);
-	await fs.promises.mkdir(dir, { recursive: true });
-	const contents = JSON.stringify(cache, null, 2);
-	const tmp = `${CACHE_PATH}.${process.pid}.${Date.now()}.tmp`;
-	try {
-		await fs.promises.writeFile(tmp, contents, "utf8");
-		try {
-			await fs.promises.rename(tmp, CACHE_PATH);
-		} catch {
-			// Windows cannot always replace an existing file with rename().
-			await fs.promises.writeFile(CACHE_PATH, contents, "utf8");
-		}
-	} finally {
-		await fs.promises.unlink(tmp).catch(() => undefined);
-	}
-}
-
-async function saveDiskCache(
-	providerId: string,
-	data: UsageData,
-): Promise<void> {
-	const previous = diskCacheWriteQueue;
-	const operation = (async () => {
-		try {
-			await previous;
-		} catch {
-			// A failed write must not block later cache updates.
-		}
-		const existing = await loadDiskCache();
-		existing[providerId] = {
-			data: normalizeUsageData(data) ?? data,
-			fetchedAt: Date.now(),
-		};
-		await persistDiskCache(existing);
-		diskCacheSnapshot = existing;
-	})();
-	diskCacheWriteQueue = operation.then(
-		() => undefined,
-		() => undefined,
-	);
-	try {
-		await operation;
-	} catch (error) {
-		console.error("[subscription-usage] failed to write disk cache:", error);
 	}
 }
 
@@ -1513,7 +1360,7 @@ export default function (pi: ExtensionAPI) {
 		const state = cache.get(cfg.id);
 		if (!state) return;
 		const requestId = state.requestId;
-		const disk = (await loadDiskCache())[cfg.id];
+		const disk = (await diskCache.read())[cfg.id];
 		// A delayed disk read must not revive a cleared provider or overwrite
 		// a newer request after a model switch, hide, or session shutdown.
 		if (cache.get(cfg.id) !== state || state.requestId !== requestId) return;
@@ -1664,7 +1511,7 @@ export default function (pi: ExtensionAPI) {
 			const model = safeModel(ctx);
 
 			// Sync with disk cache if another session fetched newer data.
-			const disk = (await loadDiskCache())[cfg.id];
+			const disk = (await diskCache.read())[cfg.id];
 			if (!isCurrentRequest()) return "cached";
 			if (!disk?.data || !Number.isFinite(disk.fetchedAt)) {
 				// No usable shared data; continue to the provider request.
@@ -1717,7 +1564,7 @@ export default function (pi: ExtensionAPI) {
 				state.lastData = data;
 				state.lastText = renderText(cfg, data, ui, model?.id);
 				renderUi(ui, cfg.id, state.lastText);
-				await saveDiskCache(cfg.id, data);
+				await diskCache.write(cfg.id, data);
 				return "fetched";
 			} catch (err) {
 				const ui = safeUi(ctx);
@@ -2036,7 +1883,7 @@ export default function (pi: ExtensionAPI) {
 				let fetchedAt = state?.lastFetch;
 				if (!data) {
 					try {
-						const disk = (await loadDiskCache())[cfg.id];
+						const disk = (await diskCache.read())[cfg.id];
 						if (disk?.data) {
 							data = disk.data;
 							fetchedAt = disk.fetchedAt;
