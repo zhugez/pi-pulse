@@ -4,7 +4,7 @@
 
 `extensions/startup-entry.ts` registers the observability extensions through
 `extensions/deferred-extension.ts`. The package manifest separately loads the
-Antigravity dependency. Keep these entry paths stable.
+bundled Antigravity and Ponytail dependencies. Keep these entry paths stable.
 
 `extensions/subscription-usage.ts` owns provider requests, footer rendering,
 commands, and session scheduling. Its existing named exports remain available
