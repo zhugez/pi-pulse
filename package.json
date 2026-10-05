@@ -16,11 +16,15 @@
     "pi-package",
     "pi-coding-agent",
     "pi-extension",
+    "antigravity",
+    "gemini",
+    "llm-provider",
     "llm-usage",
-    "throughput"
+    "throughput",
+    "ponytail"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.15.0"
   },
   "scripts": {
     "test": "bash scripts/test.sh",
@@ -29,15 +33,28 @@
   },
   "pi": {
     "extensions": [
-      "extensions/startup-entry.ts"
+      "./extensions/startup-entry.ts",
+      "./node_modules/pi-antigravity/src/index.ts",
+      "./node_modules/@dietrichgebert/ponytail/pi-extension/index.js"
+    ],
+    "skills": [
+      "./node_modules/@dietrichgebert/ponytail/skills"
     ]
   },
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": ">=0.80.0"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typescript": "^7.0.2"
-  }
+  },
+  "dependencies": {
+    "@dietrichgebert/ponytail": "4.12.0",
+    "pi-antigravity": "0.8.0"
+  },
+  "bundleDependencies": [
+    "pi-antigravity",
+    "@dietrichgebert/ponytail"
+  ]
 }
