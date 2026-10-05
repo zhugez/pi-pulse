@@ -6,10 +6,12 @@
 
 An evolving workshop for building sharp, lightweight extensions for the [Pi Coding Agent](https://pi.dev). Each extension is designed to solve one workflow problem well while remaining easy to inspect, test, and install.
 
-The collection currently starts with two observability extensions and is intended to grow over time:
+The collection currently includes two observability extensions, an integrated model provider, and a coding-discipline mode:
 
 - **Subscription usage** — provider quota, reset countdowns, and DeepSeek balance/peak pricing.
 - **Live throughput** — streaming decode speed, final token rate, TTFT, and input/cache details.
+- **Antigravity provider** — Google OAuth, Gemini/Claude/GPT-OSS model routing, quota diagnostics, linked-account failover, and image generation via [`pi-antigravity`](https://github.com/Rahularya01/pi-antigravity).
+- **Ponytail mode** — "lazy senior dev" instructions that steer the agent toward the smallest working change, plus review/audit skills, via [`ponytail`](https://github.com/DietrichGebert/ponytail).
 
 ## Extension catalog
 
@@ -51,6 +53,45 @@ Commands:
 /throughput help
 ```
 
+### Antigravity provider
+
+`pi-antigravity` is installed as a runtime dependency and loaded by the `pi-pulse` package manifest. After installing or updating `pi-pulse`, authenticate and select a model:
+
+```text
+/login antigravity
+/model antigravity/gemini-3.8-flash
+```
+
+Useful commands:
+
+```text
+/antigravity.models
+/antigravity.usage
+/antigravity.accounts
+/antigravity.refresh
+/antigravity.doctor
+/antigravity.image <prompt>
+```
+
+Model availability depends on the signed-in Google account. `pi-antigravity` requires Pi/Pi AI 0.80.0 or later and Node.js 22.15.0 or later. It is an unofficial Google integration; review its requested OAuth permissions before approving access.
+
+### Ponytail mode
+
+`@dietrichgebert/ponytail` is installed as a runtime dependency; the `pi-pulse` manifest loads its Pi extension and skills. Ponytail injects its instructions before each agent turn (default mode: `full`).
+
+```text
+/ponytail [off|lite|full|ultra]
+/ponytail status
+/ponytail default <mode>
+/ponytail-review
+/ponytail-audit
+/ponytail-gain
+/ponytail-debt
+/ponytail-help
+```
+
+The persisted default mode is stored in `~/.config/ponytail/config.json` (or `$XDG_CONFIG_HOME/ponytail/`).
+
 ## Install
 
 From GitHub:
@@ -73,7 +114,7 @@ Reload an active Pi session with:
 
 ## Development
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.15.0 or newer.
 
 ```bash
 npm install
@@ -89,10 +130,14 @@ Runtime state is stored under `~/.pi/agent/`:
 - `subscription-usage-cache.json`
 - `subscription-usage-prefs.json`
 - `live-throughput-prefs.json`
+- `auth.json` (Antigravity OAuth credentials managed by Pi)
+- `antigravity-accounts.json` (linked Antigravity accounts)
+
+The last two files contain sensitive access and refresh tokens. Never commit, share, or paste their contents into issues.
 
 ## Attribution
 
-Derived from [Th1nhNg0/pi-extensions](https://github.com/Th1nhNg0/pi-extensions), used under the MIT License. See [NOTICE](NOTICE).
+The observability extensions are derived from [Th1nhNg0/pi-extensions](https://github.com/Th1nhNg0/pi-extensions). The integrated provider is supplied by [Rahularya01/pi-antigravity](https://github.com/Rahularya01/pi-antigravity), and Ponytail mode by [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail). All are used under the MIT License. See [NOTICE](NOTICE).
 
 ## License
 

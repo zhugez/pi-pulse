@@ -5,3 +5,15 @@ Original work copyright (c) 2025-2026 Thinh Ngo.
 Used and modified under the MIT License included in this repository.
 
 The Discord Rich Presence extension and its dependency are not included.
+
+This package also loads pi-antigravity as a runtime dependency:
+https://github.com/Rahularya01/pi-antigravity
+
+Copyright (c) Rahul Arya.
+Distributed under the MIT License by its respective author.
+
+This package also loads ponytail as a runtime dependency:
+https://github.com/DietrichGebert/ponytail
+
+Copyright (c) Dietrich Gebert.
+Distributed under the MIT License by its respective author.
