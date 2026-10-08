@@ -2,10 +2,9 @@
  * Subscription usage extension.
  *
  * Shows usage for the active subscription-backed provider as a minimal
- * footer status line, directly below pi's model/thinking indicator (the
- * footer already names the provider, so no prefix is repeated):
+ * width-aware widget below the editor. Wide terminals show bars; narrow
+ * terminals use percentages and wrap rather than dropping quota windows:
  *
- *   ↑1k ↓2k $0.123 12.5%/200k (auto)      kimi-k2 • high
  *   R: ░░░░░░ 4% ~4h · W: ██████ 97% ~8h · M: █████░░░ 62% ~20d
  *   Peak ~2h · R: ░░░░░░ 4% ~4h                  ← DeepSeek peak hours
  *   5h: ░░░░░░ 1% ~4h · W: ░░░░░░ 0% ~6d
@@ -44,6 +43,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { createUsageCache } from "./subscription-usage/cache.ts";
 import {
 	asRecord,
@@ -217,6 +217,7 @@ interface StatusCtx {
 	modelRegistry?: ExtensionContext["modelRegistry"];
 	ui: {
 		setStatus(key: string, text: string | undefined): void;
+		setWidget?: ExtensionContext["ui"]["setWidget"];
 		theme: { fg(color: string, text: string): string };
 	};
 }
@@ -403,7 +404,7 @@ export function formatBalance(balance: UsageBalance): string {
  * Full multi-line breakdown of every usage window for a provider.
  *
  * Used by the `/usage` command (plain text for `ctx.ui.notify`), unlike the
- * single-line footer `render()` which is theme-colored and truncated to the
+ * single-line widget `render()` which is theme-colored and limited to the
  * active model's pool. Shows per-window percent + bar + relative reset
  * countdown + absolute reset time, plus plan and freshness when known.
  */
@@ -1407,15 +1408,47 @@ export default function (pi: ExtensionAPI) {
 		text: string | undefined,
 	): void {
 		if (!ui) return;
-		// The footer status line belongs to the active provider only: a fan-out
+		// The usage widget belongs to the active provider only: a fan-out
 		// refresh must not leave widgets behind for providers we are not using.
 		if (text !== undefined) {
 			const activeProvider = currentCtx ? safeModel(currentCtx)?.provider : undefined;
 			if (activeProvider !== providerId) return;
 		}
 		try {
-			// Footer status line, directly below the model/thinking indicator.
-			ui.setStatus(providerId, text);
+			// Older/headless UI adapters may expose only setStatus.
+			if (!ui.setWidget) {
+				ui.setStatus(providerId, text);
+				return;
+			}
+			ui.setStatus(providerId, undefined);
+			const widgetKey = `subscription-usage:${providerId}`;
+			if (text === undefined) {
+				ui.setWidget(widgetKey, undefined, { placement: "belowEditor" });
+				return;
+			}
+			ui.setWidget(widgetKey, (_tui, theme) => ({
+				invalidate() {},
+				render(width: number): string[] {
+					if (width < 1 || mode === "off") return [];
+					const model = currentCtx ? safeModel(currentCtx) : undefined;
+					if (model?.provider !== providerId) return [];
+					const cfg = cfgs.find((c) => c.id === providerId);
+					const state = cache.get(providerId);
+					if (!cfg || !state?.lastData) return wrapTextWithAnsi(text, width);
+					const data = state.lastData;
+					const render = (style: UsageStyle) => {
+						const value = cfg.render(data, theme, model.id, style);
+						return state.failStreak > 0 ? theme.fg("warning", `${value} ⚠`) : value;
+					};
+					const full = render(mode);
+					if (visibleWidth(full) <= width) return [full];
+					let compact = render("percent");
+					if (data.plan === "codex-lb") {
+						compact = `Used: ${compact.replace(/ used(?= )/g, "")}`;
+					}
+					return wrapTextWithAnsi(compact, width);
+				},
+			}), { placement: "belowEditor" });
 		} catch {
 			// The session can be replaced between safeUi() and this write.
 		}
@@ -1784,7 +1817,7 @@ export default function (pi: ExtensionAPI) {
 		Parameters<typeof pi.registerCommand>[1]["handler"]
 	>[1];
 
-	/** `/usage toggle [bars|percent|off]` — cycle the footer style or set it directly. */
+	/** `/usage toggle [bars|percent|off]` — cycle the usage style or set it directly. */
 	async function handleUsageToggle(args: string, ctx: UsageCmdCtx): Promise<void> {
 		let next: UsageMode;
 		const arg = args.trim().toLowerCase();
@@ -1814,7 +1847,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		// Re-render from cached data so the footer updates immediately.
+		// Re-render from cached data so the widget updates immediately.
 		const model = safeModel(ctx);
 		const cfg = cfgs.find((c) => c.id === model?.provider);
 		const ui = safeUi(ctx);
@@ -1874,7 +1907,7 @@ export default function (pi: ExtensionAPI) {
 				? entry.value
 				: { id: targets[index].id, outcome: "failed" as const },
 		);
-		// Only the provider active *now* owns the footer and the wake timer: a
+		// Only the provider active *now* owns the usage widget and the wake timer: a
 		// fan-out must not leave stale widgets or polling loops behind.
 		const current = safeModel(ctx);
 		const activeCfg = cfgs.find((c) => c.id === current?.provider);
@@ -1886,7 +1919,7 @@ export default function (pi: ExtensionAPI) {
 
 	/**
 	 * Single `/usage` command: bare `/usage` shows the detailed readout;
-	 * `/usage toggle [bars|percent|off]` cycles the footer style;
+	 * `/usage toggle [bars|percent|off]` cycles the usage style;
 	 * `/usage refresh [active|<provider>|all]` force-refetches the active usage
 	 * provider by default, or the explicitly named/all providers.
 	 */
@@ -1897,7 +1930,7 @@ export default function (pi: ExtensionAPI) {
 			const spaceIndex = trimmed.indexOf(" ");
 			if (spaceIndex === -1) {
 				const subcommands = [
-					{ value: "toggle", label: "toggle", description: "Cycle footer style: bars → percent → off" },
+					{ value: "toggle", label: "toggle", description: "Cycle usage style: bars → percent → off" },
 					{ value: "refresh", label: "refresh", description: "Force-refresh the active provider (or name one/all)" },
 					{ value: "help", label: "help", description: "Show usage help" },
 				];
@@ -1912,7 +1945,7 @@ export default function (pi: ExtensionAPI) {
 				const modes = ["bars", "percent", "off"].map((m) => ({
 					value: `toggle ${m}`,
 					label: `toggle ${m}`,
-					description: `Set footer style to ${m}`,
+					description: `Set usage style to ${m}`,
 				}));
 				const filtered = modes.filter((item) => item.value.startsWith(`toggle ${rest}`));
 				return filtered.length > 0 ? filtered : null;
@@ -1959,7 +1992,7 @@ export default function (pi: ExtensionAPI) {
 						[
 							"Subscription usage commands:",
 							"• /usage — detailed usage for all providers",
-							"• /usage toggle [bars|percent|off] — cycle or set footer style",
+							"• /usage toggle [bars|percent|off] — cycle or set usage style",
 							"• /usage refresh [active|<provider>|all] — force-refresh usage (default: active)",
 						].join("\n"),
 						"info",
@@ -1983,7 +2016,7 @@ export default function (pi: ExtensionAPI) {
 				try {
 					await refresh(activeCfg, ctx, true, true);
 				} catch {
-					// refresh() already renders footer errors; details fall back to cache below.
+					// refresh() already renders usage errors; details fall back to cache below.
 				}
 				const s = cache.get(activeCfg.id);
 				const current = safeModel(ctx);
@@ -2013,7 +2046,7 @@ export default function (pi: ExtensionAPI) {
 						: `${cfg.id}: ${state?.lastError ?? "no usage data yet"}`,
 				);
 			}
-			const hiddenHint = mode === "off" ? "\n(Footer hidden — /usage toggle to restore it)" : "";
+			const hiddenHint = mode === "off" ? "\n(Usage hidden — /usage toggle to restore it)" : "";
 			ctx.ui.notify(sections.join("\n\n") + hiddenHint, "info");
 		},
 	});
