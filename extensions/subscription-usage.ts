@@ -5,7 +5,6 @@
  * width-aware widget below the editor. Wide terminals show bars; narrow
  * terminals use percentages and wrap rather than dropping quota windows:
  *
- *   ↑1k ↓2k $0.123 12.5%/200k (auto)      kimi-k2 • high
  *   R: ░░░░░░ 4% ~4h · W: ██████ 97% ~8h · M: █████░░░ 62% ~20d
  *   Peak ~2h · R: ░░░░░░ 4% ~4h                  ← DeepSeek peak hours
  *   5h: ░░░░░░ 1% ~4h · W: ░░░░░░ 0% ~6d
@@ -405,7 +404,7 @@ export function formatBalance(balance: UsageBalance): string {
  * Full multi-line breakdown of every usage window for a provider.
  *
  * Used by the `/usage` command (plain text for `ctx.ui.notify`), unlike the
- * single-line footer `render()` which is theme-colored and truncated to the
+ * single-line widget `render()` which is theme-colored and limited to the
  * active model's pool. Shows per-window percent + bar + relative reset
  * countdown + absolute reset time, plus plan and freshness when known.
  */
@@ -1409,7 +1408,7 @@ export default function (pi: ExtensionAPI) {
 		text: string | undefined,
 	): void {
 		if (!ui) return;
-		// The footer status line belongs to the active provider only: a fan-out
+		// The usage widget belongs to the active provider only: a fan-out
 		// refresh must not leave widgets behind for providers we are not using.
 		if (text !== undefined) {
 			const activeProvider = currentCtx ? safeModel(currentCtx)?.provider : undefined;
@@ -1818,7 +1817,7 @@ export default function (pi: ExtensionAPI) {
 		Parameters<typeof pi.registerCommand>[1]["handler"]
 	>[1];
 
-	/** `/usage toggle [bars|percent|off]` — cycle the footer style or set it directly. */
+	/** `/usage toggle [bars|percent|off]` — cycle the usage style or set it directly. */
 	async function handleUsageToggle(args: string, ctx: UsageCmdCtx): Promise<void> {
 		let next: UsageMode;
 		const arg = args.trim().toLowerCase();
@@ -1848,7 +1847,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		// Re-render from cached data so the footer updates immediately.
+		// Re-render from cached data so the widget updates immediately.
 		const model = safeModel(ctx);
 		const cfg = cfgs.find((c) => c.id === model?.provider);
 		const ui = safeUi(ctx);
@@ -1908,7 +1907,7 @@ export default function (pi: ExtensionAPI) {
 				? entry.value
 				: { id: targets[index].id, outcome: "failed" as const },
 		);
-		// Only the provider active *now* owns the footer and the wake timer: a
+		// Only the provider active *now* owns the usage widget and the wake timer: a
 		// fan-out must not leave stale widgets or polling loops behind.
 		const current = safeModel(ctx);
 		const activeCfg = cfgs.find((c) => c.id === current?.provider);
@@ -1920,7 +1919,7 @@ export default function (pi: ExtensionAPI) {
 
 	/**
 	 * Single `/usage` command: bare `/usage` shows the detailed readout;
-	 * `/usage toggle [bars|percent|off]` cycles the footer style;
+	 * `/usage toggle [bars|percent|off]` cycles the usage style;
 	 * `/usage refresh [active|<provider>|all]` force-refetches the active usage
 	 * provider by default, or the explicitly named/all providers.
 	 */
