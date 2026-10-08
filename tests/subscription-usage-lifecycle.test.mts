@@ -292,7 +292,7 @@ test("/usage works while hidden without fetching", async (t) => {
 	await flush();
 	assert.equal(h.fetch.mock.callCount(), 0);
 	assert.match(notices.at(-1)!, /opencode-go/);
-	assert.match(notices.at(-1)!, /Footer hidden/);
+	assert.match(notices.at(-1)!, /Usage hidden/);
 });
 
 test("/usage toggle cycles footer style", async (t) => {

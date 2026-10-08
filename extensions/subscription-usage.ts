@@ -1930,7 +1930,7 @@ export default function (pi: ExtensionAPI) {
 			const spaceIndex = trimmed.indexOf(" ");
 			if (spaceIndex === -1) {
 				const subcommands = [
-					{ value: "toggle", label: "toggle", description: "Cycle footer style: bars → percent → off" },
+					{ value: "toggle", label: "toggle", description: "Cycle usage style: bars → percent → off" },
 					{ value: "refresh", label: "refresh", description: "Force-refresh the active provider (or name one/all)" },
 					{ value: "help", label: "help", description: "Show usage help" },
 				];
@@ -1945,7 +1945,7 @@ export default function (pi: ExtensionAPI) {
 				const modes = ["bars", "percent", "off"].map((m) => ({
 					value: `toggle ${m}`,
 					label: `toggle ${m}`,
-					description: `Set footer style to ${m}`,
+					description: `Set usage style to ${m}`,
 				}));
 				const filtered = modes.filter((item) => item.value.startsWith(`toggle ${rest}`));
 				return filtered.length > 0 ? filtered : null;
@@ -1992,7 +1992,7 @@ export default function (pi: ExtensionAPI) {
 						[
 							"Subscription usage commands:",
 							"• /usage — detailed usage for all providers",
-							"• /usage toggle [bars|percent|off] — cycle or set footer style",
+							"• /usage toggle [bars|percent|off] — cycle or set usage style",
 							"• /usage refresh [active|<provider>|all] — force-refresh usage (default: active)",
 						].join("\n"),
 						"info",
@@ -2016,7 +2016,7 @@ export default function (pi: ExtensionAPI) {
 				try {
 					await refresh(activeCfg, ctx, true, true);
 				} catch {
-					// refresh() already renders footer errors; details fall back to cache below.
+					// refresh() already renders usage errors; details fall back to cache below.
 				}
 				const s = cache.get(activeCfg.id);
 				const current = safeModel(ctx);
@@ -2046,7 +2046,7 @@ export default function (pi: ExtensionAPI) {
 						: `${cfg.id}: ${state?.lastError ?? "no usage data yet"}`,
 				);
 			}
-			const hiddenHint = mode === "off" ? "\n(Footer hidden — /usage toggle to restore it)" : "";
+			const hiddenHint = mode === "off" ? "\n(Usage hidden — /usage toggle to restore it)" : "";
 			ctx.ui.notify(sections.join("\n\n") + hiddenHint, "info");
 		},
 	});
